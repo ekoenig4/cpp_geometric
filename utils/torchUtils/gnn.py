@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import random_split
 from torch_geometric.data import Data
+from torch_geometric.loader import DataLoader
 import sklearn.metrics as metrics
 
 from ..selectUtils import *
@@ -48,24 +49,29 @@ def get_wp(wp_fpr, fpr, tpr, thresholds):
     return np.array([wp_fpr, wp_tpr, wp_threshold])
 
 
+def predict_dataset_edges(model, dataset, batch_size=50):
+    if type(dataset) is not DataLoader:
+        dataset = DataLoader(dataset, batch_size=batch_size, num_workers=4)
+    edge_scores = torch.cat([model.predict_edges(data) for data in dataset])
+    return edge_scores.numpy()
+
+
+def predict_dataset_nodes(model, dataset, batch_size=50):
+    if type(dataset) is not DataLoader:
+        dataset = DataLoader(dataset, batch_size=batch_size, num_workers=4)
+    edge_scores = torch.cat([model.predict_nodes(data) for data in dataset])
+    return edge_scores.numpy()
+
+
 class ROCMetric:
-    def __init__(self):
-        self.true = torch.Tensor()
-        self.pred = torch.Tensor()
-
-    def update(self, true, pred):
-        self.true = torch.cat([self.true, true])
-        self.pred = torch.cat([self.pred, pred])
-
-    def process(self):
-        self.true = self.true.numpy()
-        self.pred = self.pred.numpy()
-
+    def __init__(self, true, pred):
+        self.true = ak.flatten(true,axis=None).to_numpy()
+        self.pred = ak.flatten(pred,axis=None).to_numpy()
         self.fpr, self.tpr, self.thresholds = metrics.roc_curve(
             self.true, self.pred)
         self.auc = metrics.auc(self.fpr, self.tpr)
 
-    def get_wps(self, fpr_wps=[0.1, 0.01, 0.001]):
+    def get_wps(self, fpr_wps=[0.2, 0.1, 0.05]):
         self.wps = np.stack(
             [get_wp(fpr_wp, self.fpr, self.tpr, self.thresholds) for fpr_wp in fpr_wps])
         return self.wps
@@ -73,20 +79,17 @@ class ROCMetric:
     def get_values(self): return self.fpr, self.tpr, self.auc
 
 
-def get_model_roc(model, dataloader):
-    node_metrics = ROCMetric()
-    edge_metrics = ROCMetric()
+def get_model_roc(model, dataloader, batch_size=50):
+    if type(dataloader) is not DataLoader:
+        dataloader = DataLoader(dataloader, batch_size=batch_size, num_workers=4)
 
-    for data in dataloader:
-        node_true, edge_true = data.y, data.edge_y
-        node_pred, edge_pred = model.predict(data)
+    node_true = torch.cat([data.y for data in dataloader]).numpy()
+    node_pred = predict_dataset_nodes(model, dataloader)
 
-        edge_true = get_uptri(data.edge_index, edge_true)
-        # edge_pred = get_uptri(data.edge_index, edge_pred)
+    edge_true = torch.cat([data.edge_y for data in dataloader]).numpy()
+    edge_pred = predict_dataset_edges(model, dataloader)
 
-        node_metrics.update(node_true, node_pred)
-        edge_metrics.update(edge_true, edge_pred)
-    node_metrics.process()
-    edge_metrics.process()
+    node_metrics = ROCMetric(node_true, node_pred)
+    edge_metrics = ROCMetric(edge_true, edge_pred)
 
     return node_metrics, edge_metrics

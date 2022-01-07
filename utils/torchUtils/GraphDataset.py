@@ -112,13 +112,14 @@ def get_class_weights(node_targs, edge_targs):
 
     return node_class_weights, edge_class_weights, type_class_weights
 
+
 def to_uptri_graph(graph):
-    edge_index, edge_attr, edge_y = graph.edge_index, graph.edge_attr, graph.edge_y 
+    edge_index, edge_attr, edge_y = graph.edge_index, graph.edge_attr, graph.edge_y
     uptri = edge_index[0] < edge_index[1]
     edge_index = torch.stack([edge_index[0][uptri], edge_index[1][uptri]])
     edge_attr = edge_attr[uptri]
     edge_y = edge_y[uptri]
-    return Data(x=graph.x,y=graph.y,edge_index=edge_index,edge_attr=edge_attr,edge_y=edge_y)
+    return Data(x=graph.x, y=graph.y, edge_index=edge_index, edge_attr=edge_attr, edge_y=edge_y)
 
 
 class Dataset(InMemoryDataset):
@@ -133,7 +134,7 @@ class Dataset(InMemoryDataset):
         self.node_attr_names = template.node_attr_names if template is not None else None
         self.edge_attr_names = template.edge_attr_names if template is not None else None
 
-        super().__init__(root,transform)
+        super().__init__(root, transform)
         self.data, self.slices = torch.load(self.processed_paths[0])
         self.node_attr_names, self.edge_attr_names = torch.load(
             self.processed_paths[1])
@@ -179,14 +180,19 @@ class Dataset(InMemoryDataset):
         edge_attrs, edge_targs, edge_slices = prepare_features(
             edge_attrs, edge_targs)
 
-        
-        assert node_attrs.type() == 'torch.FloatTensor', f"Expected node_attrs of type torch.FloatTensor, but got {node_attrs.type()}"    
-        assert node_targs.type() == 'torch.LongTensor', f"Expected node_targs of type torch.LongTensor, but got {node_targs.type()}"    
-        assert node_slices.type() == 'torch.LongTensor', f"Expected node_slices of type torch.LongTensor, but got {node_slices.type()}"
+        assert node_attrs.type(
+        ) == 'torch.FloatTensor', f"Expected node_attrs of type torch.FloatTensor, but got {node_attrs.type()}"
+        assert node_targs.type(
+        ) == 'torch.LongTensor', f"Expected node_targs of type torch.LongTensor, but got {node_targs.type()}"
+        assert node_slices.type(
+        ) == 'torch.LongTensor', f"Expected node_slices of type torch.LongTensor, but got {node_slices.type()}"
 
-        assert edge_attrs.type() == 'torch.FloatTensor', f"Expected edge_attrs of type torch.FloatTensor, but got {edge_attrs.type()}" 
-        assert edge_targs.type() == 'torch.LongTensor', f"Expected edge_targs of type torch.LongTensor, but got {edge_targs.type()}"  
-        assert edge_slices.type() == 'torch.LongTensor', f"Expected edge_slices of type torch.LongTensor, but got {edge_slices.type()}"
+        assert edge_attrs.type(
+        ) == 'torch.FloatTensor', f"Expected edge_attrs of type torch.FloatTensor, but got {edge_attrs.type()}"
+        assert edge_targs.type(
+        ) == 'torch.LongTensor', f"Expected edge_targs of type torch.LongTensor, but got {edge_targs.type()}"
+        assert edge_slices.type(
+        ) == 'torch.LongTensor', f"Expected edge_slices of type torch.LongTensor, but got {edge_slices.type()}"
 
         print("Building Dataset...")
         data_list = build_dataset(
@@ -217,5 +223,6 @@ class Dataset(InMemoryDataset):
         data_list = build_dataset(
             node_attrs, node_targs, node_slices, edge_attrs, edge_targs, edge_slices)
 
-        data_list = [graph_to_torch(graph) for graph in data_list]
-        return data_list
+        if self.transform is not None:
+            return [self.transform(graph_to_torch(graph)) for graph in data_list]
+        return [graph_to_torch(graph) for graph in data_list]

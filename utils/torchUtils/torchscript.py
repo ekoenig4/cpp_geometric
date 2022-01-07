@@ -1,6 +1,8 @@
 import torch
 from typing import List
 
+from .classifier import GCN
+
 
 @torch.jit.script
 class GraphDataBase:
@@ -19,13 +21,16 @@ def get_fully_connected(n_nodes: int) -> torch.Tensor:
 
 
 @torch.jit.script
-def build_graph(node_attrs: torch.Tensor, node_targs: torch.Tensor, edge_attrs: torch.Tensor, edge_targs: torch.Tensor) -> GraphDataBase:
+def build_graph(node_attrs: torch.Tensor, node_targs: torch.Tensor, edge_attrs: torch.Tensor, edge_targs: torch.Tensor, i: int) -> GraphDataBase:
     n_nodes = node_attrs.shape[0]
     edge_index = get_fully_connected(n_nodes)
 
-    assert node_attrs.shape[0] == node_targs.shape[0], f"Expected node_attrs and node_targs shapes to match, but got {node_attrs.shape[0],node_targs.shape[0]}"
-    assert edge_attrs.shape[0] == edge_targs.shape[0], f"Expected edge_attrs and edge_targs shapes to match, but got {edge_attrs.shape[0],edge_targs.shape[0]}"
-    assert edge_attrs.shape[0] == edge_index.shape[1], f"Expected edge_attrs and edge_index shapes to match, but got {edge_attrs.shape[0],edge_index.shape[1]}"
+    assert node_attrs.shape[0] == node_targs.shape[
+        0], f"Expected node_attrs and node_targs shapes to match, but got {node_attrs.shape[0],node_targs.shape[0]} in event {i}"
+    assert edge_attrs.shape[0] == edge_targs.shape[
+        0], f"Expected edge_attrs and edge_targs shapes to match, but got {edge_attrs.shape[0],edge_targs.shape[0]} in event {i}"
+    assert edge_attrs.shape[0] == edge_index.shape[
+        1], f"Expected edge_attrs and edge_index shapes to match, but got {edge_attrs.shape[0],edge_index.shape[1]} in event {i}"
 
     return GraphDataBase(node_attrs, node_targs, edge_index, edge_attrs, edge_targs)
 
@@ -33,13 +38,14 @@ def build_graph(node_attrs: torch.Tensor, node_targs: torch.Tensor, edge_attrs: 
 @torch.jit.script
 def build_dataset(node_attrs: torch.Tensor, node_targs: torch.Tensor, node_slices: torch.Tensor, edge_attrs: torch.Tensor, edge_targs: torch.Tensor, edge_slices: torch.Tensor) -> List[GraphDataBase]:
     data_list: List[GraphDataBase] = []
-    for node_lo, node_hi, edge_lo, edge_hi in zip(node_slices[:-1], node_slices[1:], edge_slices[:-1], edge_slices[1:]):
+    for i, (node_lo, node_hi, edge_lo, edge_hi) in enumerate(zip(node_slices[:-1], node_slices[1:], edge_slices[:-1], edge_slices[1:])):
         data_list.append(
             build_graph(
                 node_attrs[node_lo:node_hi],
                 node_targs[node_lo:node_hi],
                 edge_attrs[edge_lo:edge_hi],
-                edge_targs[edge_lo:edge_hi]
+                edge_targs[edge_lo:edge_hi],
+                i
             )
         )
     return data_list

@@ -145,18 +145,19 @@ def display_pred(model, g, *args, **kwargs):
     display_graph(g_pred, *args, **kwargs, figax=(fig, axs[1]))
     axs[1].set(title="Pred")
 
+def plot_aucroc(roc_metrics,tag="",figax=None):
+    if figax is None: figax = plt.subplots()
 
-def plot_auroc(node_metrics, edge_metrics):
+    fpr, tpr, auc = roc_metrics.get_values()
+    graph_simple(fpr, tpr, xlabel=f"{tag} False Positive", ylabel=f"{tag} True Positive",
+                 title=f"AUC: {auc:.3}", marker=None, figax=figax)
+    return figax
+
+
+def plot_graph_auroc(node_metrics, edge_metrics):
     fig, axs = plt.subplots(ncols=2, figsize=(16, 5))
 
-    fpr, tpr, auc = node_metrics.get_values()
-
-    graph_simple(fpr, tpr, xlabel="Node False Positive", ylabel="Node True Positive",
-                 title=f"AUC: {auc:.3}", marker=None, figax=(fig, axs[0]))
-
-    fpr, tpr, auc = edge_metrics.get_values()
-
-    graph_simple(fpr, tpr, xlabel="Edge False Positive", ylabel="Edge True Positive",
-                 title=f"AUC: {auc:.3}", marker=None, figax=(fig, axs[1]))
+    plot_aucroc(node_metrics,'Node',figax=(fig,axs[0]))
+    plot_aucroc(edge_metrics,'Edge',figax=(fig,axs[1]))
 
     return fig, axs
