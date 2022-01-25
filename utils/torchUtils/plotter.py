@@ -138,6 +138,12 @@ def display_graph(g, pos='xy', sizing=1, coloring='paired', show_detector=False,
 
 
 def display_pred(model, g, *args, **kwargs):
+    """Plots graph prediction
+
+    Args:
+        model (pyTorch Model): Model to use to predict
+        g (Graph Data): pyTorch graph data
+    """
     fig, axs = plt.subplots(ncols=2, figsize=(10, 5))
     display_graph(g, *args, **kwargs, figax=(fig, axs[0]))
     axs[0].set(title="True")

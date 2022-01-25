@@ -1,63 +1,18 @@
-from typing import Callable, Union, Optional
-
+from torch_geometric.nn import Linear
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
-import torch_geometric
-from torch import Tensor
-from torch_geometric.nn import Linear
-from torch_geometric.typing import Adj, PairTensor
 from torchmetrics.functional import accuracy
 
 from .gnn import to_tensor, get_uptri
+from .layers import EdgeConv,EdgeConvONNX
 
 useGPU = True 
 useGPU = useGPU and torch.cuda.is_available()
 
-class EdgeConv(torch_geometric.nn.EdgeConv):
-    aggr_funcs = dict(
-        max=lambda tensor: tensor.max(dim=-1)[0],
-        min=lambda tensor: tensor.min(dim=-1)[0],
-        mean=lambda tensor: tensor.mean(dim=-1),
-    )
-
-    def __init__(self, nn: Callable, aggr: str = 'max', edge_aggr: str = 'max', return_with_edges: bool = False, return_only_edges: bool = False, **kwargs):
-        super(EdgeConv, self).__init__(nn, aggr, **kwargs)
-        self.edge_x: Tensor = Tensor
-
-        assert edge_aggr in ['max', 'mean', 'min', None]
-        self.edge_aggr = edge_aggr
-
-        self.return_with_edges = return_with_edges
-        self.return_only_edges = return_only_edges
-
-    def forward(self, x: Union[Tensor, PairTensor], edge_index: Adj, edge_x: Optional[Tensor]) -> Tensor:
-        if isinstance(x, Tensor):
-            x: PairTensor = (x, x)
-        # propagate_type: (x: PairTensor)
-        x = self.propagate(edge_index, x=x, edge_x=edge_x)
-        if self.return_with_edges or self.return_only_edges:
-            if self.edge_aggr is None:
-                edge_x = torch.cat(
-                    [x[edge_index[1]], x[edge_index[0]], self.edge_x], dim=-1)
-            else:
-                edge_x = torch.cat(
-                    [x[edge_index[1]][:, :, None], x[edge_index[0]][:, :, None], self.edge_x[:, :, None]], dim=-1)
-                edge_x = self.aggr_funcs[self.edge_aggr](edge_x)
-
-            if self.return_with_edges:
-                return x, edge_x
-            if self.return_only_edges:
-                return edge_x
-
-        return x
-
-    def message(self, x_i: Tensor, x_j: Tensor, edge_x: Tensor) -> Tensor:
-        self.edge_x = self.nn(torch.cat([x_i, x_j - x_i, edge_x], dim=-1))
-        return self.edge_x
 
 class GCN(pl.LightningModule):
-    def __init__(self, dataset, nn1_out=32, nn2_out=128, lr=1e-3):
+    def __init__(self, dataset, for_onnx=False, nn1_out=32, nn2_out=128, lr=1e-3):
         super().__init__()
         self.lr = lr
         self.save_hyperparameters('nn1_out', 'nn2_out')
@@ -65,20 +20,22 @@ class GCN(pl.LightningModule):
         self.edge_weights = to_tensor(dataset.edge_class_weights, useGPU)
         self.type_weights = to_tensor(dataset.type_class_weights, useGPU)
 
+        EdgeConvLayer = EdgeConv if not for_onnx else EdgeConvONNX
+
         nn1 = torch.nn.Sequential(
             Linear(2*dataset.num_node_features +
                    dataset.num_edge_features, nn1_out),
             torch.nn.ELU()
         )
 
-        self.conv1 = EdgeConv(nn1, edge_aggr=None, return_with_edges=True)
+        self.conv1 = EdgeConvLayer(nn1, edge_aggr=None, return_with_edges=True)
 
         nn2 = torch.nn.Sequential(
             Linear(5*nn1_out, nn2_out),
             torch.nn.ELU()
         )
 
-        self.conv2 = EdgeConv(nn2, edge_aggr=None, return_with_edges=True)
+        self.conv2 = EdgeConvLayer(nn2, edge_aggr=None, return_with_edges=True)
 
         self.edge_seq = torch.nn.Sequential(
             Linear(3*nn2_out, 2),
@@ -89,7 +46,11 @@ class GCN(pl.LightningModule):
         )
 
     def forward(self, data):
-        x, edge_index, edge_x = data.x, data.edge_index, data.edge_attr
+        if type(data) is list:
+            data = data[0]
+        if type(data) is not tuple:
+            data = (data.x, data.edge_index, data.edge_attr)
+        x, edge_index, edge_x = data
 
         x, edge_x = self.conv1(x, edge_index, edge_x)
         x, edge_x = self.conv2(x, edge_index, edge_x)
