@@ -46,8 +46,8 @@ class EdgeConv(MessagePassing):
 
         return x
 
-    def message(self, x_i: Tensor, x_j: Tensor, edge_x: Tensor) -> Tensor:
-        self.edge_x = self.nn(torch.cat([x_i, x_j - x_i, edge_x], dim=-1))
+    def message(self, x_j, edge_attr):
+        
         return self.edge_x
 
 

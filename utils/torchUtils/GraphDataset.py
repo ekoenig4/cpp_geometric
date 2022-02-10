@@ -112,6 +112,13 @@ def get_class_weights(node_targs, edge_targs):
 
     return node_class_weights, edge_class_weights, type_class_weights
 
+class Transform:
+    def __init__(self,*args):
+        self.transforms = args
+    def __call__(self,graph):
+        for transform in self.transforms: 
+            graph = transform(graph)
+        return graph
 
 def to_uptri_graph(graph):
     edge_index, edge_attr, edge_y = graph.edge_index, graph.edge_attr, graph.edge_y
@@ -121,6 +128,11 @@ def to_uptri_graph(graph):
     edge_y = edge_y[uptri]
     return Data(x=graph.x, y=graph.y, edge_index=edge_index, edge_attr=edge_attr, edge_y=edge_y)
 
+def to_numpy(graph):
+    return Data(x=graph.x.numpy(),y=graph.y.numpy(),edge_index=graph.edge_index.numpy(),edge_attr=graph.edge_attr.numpy(),edge_y=graph.edge_y.numpy())
+
+def to_long(graph,precision=1e6):
+    return Data(x=(precision*graph.x).long(),y=graph.y.long(),edge_index=graph.edge_index.long(),edge_attr=(precision*graph.edge_attr).long(),edge_y=graph.edge_y.long())
 
 class Dataset(InMemoryDataset):
     def __init__(self, root, tree=None, template=None, transform=None):
