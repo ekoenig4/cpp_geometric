@@ -14,8 +14,7 @@ class EdgeConv(MessagePassing):
     )
 
     def __init__(self, nn: Callable, aggr: str = 'max', edge_aggr: str = 'max', return_with_edges: bool = False, return_only_edges: bool = False, **kwargs):
-        super().__init__(aggr, **kwargs)
-        self.nn = nn
+        super(EdgeConv, self).__init__(nn, aggr, **kwargs)
         self.edge_x: Tensor = Tensor
 
         assert edge_aggr in ['max', 'mean', 'min', None]
@@ -23,7 +22,6 @@ class EdgeConv(MessagePassing):
 
         self.return_with_edges = return_with_edges
         self.return_only_edges = return_only_edges
-        
 
     def forward(self, x: Union[Tensor, PairTensor], edge_index: Adj, edge_x: Optional[Tensor]) -> Tensor:
         if isinstance(x, Tensor):
@@ -46,25 +44,31 @@ class EdgeConv(MessagePassing):
 
         return x
 
-    def message(self, x_j, edge_attr):
-        
+    def message(self, x_i: Tensor, x_j: Tensor, edge_x: Tensor) -> Tensor:
+        self.edge_x = self.nn(torch.cat([x_i, x_j - x_i, edge_x], dim=-1))
         return self.edge_x
 
 
-class EdgeConvONNX(EdgeConv):
-    def aggregate(self, inputs: Tensor, index: Tensor,
-                  ptr: Optional[Tensor] = None,
-                  dim_size: Optional[int] = None) -> Tensor:
-        def aggr_input(inputs):
-            return inputs.max(dim=0)[0]
+class GCNConv(MessagePassing):
+    def __init__(self,n,m):
+        super(GCNConv,self).__init__(aggr='add')
+        self.linear = torch.nn.Linear(n,m)
+    def forward(self, x, edge_index, edge_attr):
+        x = self.linear(x)
+        return self.propagate(edge_index,x=x,edge_attr=edge_attr)
+    
+    def message(self,x_i, x_j, edge_attr):
         
-        size,nfeatures = inputs.size()
-        outputs = inputs.new_zeros((dim_size,nfeatures))
-        
-        padding = inputs.new_zeros((1,nfeatures))
-        for i in range(dim_size):   
-            outputs[i] = aggr_input(
-                torch.cat([inputs[index==i],padding],dim=0)
-                )
-        self.debug = (inputs,index,outputs)
-        return outputs
+        return torch.nn.functional.relu(x_j+edge_attr)
+    
+    def update(self,aggr_out):
+        return aggr_out
+    
+class EdgeOnlyConv(torch.nn.Module):
+    def __init__(self,n_in_node,n_in_edge,n_out):
+        super().__init__()
+        self.linear = torch.nn.Linear(2*n_in_node+n_in_edge,n_out)
+    def forward(self,x,edge_index,edge_attr):
+        row,col = edge_index
+        out = torch.cat([x[row],x[col],edge_attr],dim=1)
+        return self.linear(out)
