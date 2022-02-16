@@ -59,7 +59,7 @@ def paired_coloring(g):
 
     npairs = 0
     for e, (ni, nj) in map(lambda kv: kv[0], sorted_scores):
-        if npairs == 3: break
+        if npairs == 4: break
         if node_pairs[ni] == -1 or node_pairs[nj] == -1:
             continue
         if node_pairs[ni] == node_pairs[nj]:

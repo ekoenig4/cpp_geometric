@@ -66,7 +66,7 @@ def get_edge_targs(jets):
     add = jets.signalId[:, None] + jets.signalId[:, :, None]
     mod2 = add % 2
 
-    paired = (diff*mod2 == 1) & ((add == 1) | (add == 5) | (add == 9))
+    paired = (diff*mod2 == 1) & ((add == 1) | (add == 5) | (add == 9) | (add == 13))
     return ak.flatten(1*paired, axis=2)
 
 
