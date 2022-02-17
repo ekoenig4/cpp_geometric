@@ -15,7 +15,7 @@ class EdgeConv(MessagePassing):
 
     def __init__(self, nn: Callable, aggr: str = 'max', edge_aggr: str = 'max', return_with_edges: bool = False, return_only_edges: bool = False, **kwargs):
         super().__init__(aggr, **kwargs)
-        self.nn = nn 
+        self.nn = nn
         self.edge_x: Tensor = Tensor
 
         assert edge_aggr in ['max', 'mean', 'min', None]
@@ -48,38 +48,3 @@ class EdgeConv(MessagePassing):
     def message(self, x_i: Tensor, x_j: Tensor, edge_x: Tensor) -> Tensor:
         self.edge_x = self.nn(torch.cat([x_i, x_j - x_i, edge_x], dim=-1))
         return self.edge_x
-
-
-class GCNConv(MessagePassing):
-    def __init__(self,n_in_node,n_in_edge,n_out):
-        super(GCNConv,self).__init__(aggr='add')
-        self.linear = torch.nn.Linear(2*n_in_node+n_in_edge,n_out);
-    def forward(self, x, edge_index, edge_attr):
-        # self.messages = []
-        return self.propagate(edge_index,x=x,edge_attr=edge_attr)
-    
-    def message(self,x_i, x_j, edge_attr):
-        out = torch.cat([x_i,x_j-x_i,edge_attr],dim=1)
-        out = self.linear(out)
-        # self.messages.append((x_i,x_j,edge_attr,out))
-        return out
-    
-    def update(self,aggr_out):
-        return aggr_out
-    
-class EdgeConCat(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-    def forward(self,x,edge_index,edge_attr):
-        src,dest = edge_index
-        out = torch.cat([x[src],x[dest],edge_attr],dim=1)
-        return out
-
-class EdgeOnlyConv(torch.nn.Module):
-    def __init__(self,n_in_node,n_in_edge,n_out):
-        super().__init__()
-        self.linear = torch.nn.Linear(2*n_in_node+n_in_edge,n_out)
-    def forward(self,x,edge_index,edge_attr):
-        src,dest = edge_index
-        out = torch.cat([x[src],x[dest],edge_attr],dim=1)
-        return self.linear(out)
