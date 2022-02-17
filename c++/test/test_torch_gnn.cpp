@@ -7,6 +7,7 @@
 #include <Eigen/Core>
 
 #include "TorchUtils.h"
+#include "GCNConv.h"
 
 using namespace std;
 using namespace Eigen;

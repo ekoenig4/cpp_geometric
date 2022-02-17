@@ -31,8 +31,10 @@ BINS	 =  $(addprefix $(BIN),${___BINS})
 LINKDEF   =  $(wildcard ${HDR}*LinkDef.h)
 DICTHDRS  =  $(patsubst $(LINKDEF),,$(HDRS)) $(LINKDEF)
 
-ROOTCFLAGS    = $(shell root-config --cflags)
-ROOTGLIBS     = $(shell root-config --glibs)
+# ROOTCFLAGS    = $(shell root-config --cflags)
+# ROOTGLIBS     = $(shell root-config --glibs)
+
+TFINC=-I/cvmfs/cms.cern.ch/slc7_amd64_gcc700/external/eigen/64060da8461a627eb25b5a7bc0616776068db58b/include/eigen3
 
 ARCHL = -m64
 CXX  =  g++
@@ -45,18 +47,18 @@ FFLAGS = -c
 
 LD       =  g++
 LDFLAGS  =  -rdynamic -shared -O3 $(ARCHL)
-SONAME	 =  libsixBanalysis.so
-SONAME2  =  sixBanalysis
+SONAME	 =  libcppgeometric.so
+SONAME2  =  cppgeometric
 SOFLAGS  =  -Wl,-soname,$(SONAME)
 
-TFLIBS = -lPhysicsToolsTensorFlow -ltensorflow_cc -ltensorflow_framework
-CMSLIBS =  -L$(CMSSW_BASE)/lib/$(SCRAM_ARCH)/ -lJetMETCorrectionsModules -lCondFormatsJetMETObjects -lFWCoreMessageLogger $(TFLIBS)
+# TFLIBS = -lPhysicsToolsTensorFlow -ltensorflow_cc -ltensorflow_framework
+# CMSLIBS =  -L$(CMSSW_BASE)/lib/$(SCRAM_ARCH)/ -lJetMETCorrectionsModules -lCondFormatsJetMETObjects -lFWCoreMessageLogger $(TFLIBS)
 # CMSLIBS =  -L$(CMSSW_BASE)/lib/$(SCRAM_ARCH)/ -lPhysicsToolsKinFitter -lJetMETCorrectionsModules -lCondFormatsJetMETObjects -lFWCoreMessageLogger
-GLIBS   =  $(ROOTGLIBS) -lm -ldl -rdynamic -lboost_program_options -lGenVector -lFoam -lMinuit -lTMVA -lMLP -lXMLIO -lGpad  -lTreePlayer -lRooFit -lRooFitCore -lRooStats  $(CMSLIBS)
+# GLIBS   =  $(ROOTGLIBS) -lm -ldl -rdynamic -lboost_program_options -lGenVector -lFoam -lMinuit -lTMVA -lMLP -lXMLIO -lGpad  -lTreePlayer -lRooFit -lRooFitCore -lRooStats  $(CMSLIBS)
 
 #################################################
 #if mac 64
-ARCH  =  $(shell root-config --arch)
+# ARCH  =  $(shell root-config --arch)
 ifeq ($(ARCH),macosx64)
 LibSuf  =  .so
 
@@ -69,8 +71,8 @@ CXXFLAGS  = -fPIC  -Wall -W -Woverloaded-virtual -O2 $(ARCHL) -pipe -I$(HDR) $(R
 LDFLAGS  =  -dynamiclib -shared -single_module -undefined dynamic_lookup $(ARCHL)
 #SONAME	 =  libPlotter.dylib
 # SOFLAGS  =
-SONAME	 =  libsixBanalysis.so
-SONAME2  =  sixBanalysis
+SONAME	 =  libcppgeometric.so
+SONAME2  =  cppgeometric
 SOFLAGS  =  
 endif
 #################################################

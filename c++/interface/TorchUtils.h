@@ -7,7 +7,6 @@
 
 #include <Eigen/Dense>
 
-
 namespace TorchUtils
 {
     Eigen::MatrixXf to_eigen(std::vector<std::vector<float>> data);
@@ -20,6 +19,7 @@ namespace TorchUtils
      * @param test matrix to test
      */
     void compare_matrix(const Eigen::MatrixXf true_mat, const Eigen::MatrixXf test);
+    void scatter_add(Eigen::MatrixXf &x, std::vector<std::vector<int>> &edge_index, Eigen::MatrixXf &msg);
 
     struct Layer
     {
@@ -52,25 +52,6 @@ namespace TorchUtils
     struct ReLu : public Layer
     {
         void apply(Eigen::MatrixXf &x);
-    };
-
-    struct GCNConv
-    {
-        int n_in_node;
-        int n_in_edge;
-        int n_out;
-        Linear *linear;
-
-        GCNConv(int n_in_node, int n_in_edge, int n_out);
-        void apply(Eigen::MatrixXf &x, std::vector<std::vector<int>> &edge_index, Eigen::MatrixXf &edge_attr);
-        Eigen::MatrixXf message(Eigen::MatrixXf &x, std::vector<std::vector<int>> &edge_index, Eigen::MatrixXf &edge_attr);
-        void aggregate(Eigen::MatrixXf &x, std::vector<std::vector<int>> &edge_index, Eigen::MatrixXf &edge_attr, Eigen::MatrixXf &msg);
-        void propagate(Eigen::MatrixXf &x, std::vector<std::vector<int>> &edge_index, Eigen::MatrixXf &edge_attr);
-
-        void set_weights(std::vector<std::vector<float>> weights) { linear->set_weights(weights); }
-        void set_bias(std::vector<std::vector<float>> bias) { linear->set_bias(bias); }
-        void set_parameters(std::vector<std::vector<float>> weights, std::vector<std::vector<float>> bias) { linear->set_parameters(weights, bias); }
-        void print_parameters() { linear->print_parameters(); }
     };
 }
 #endif // TORHCUTILS_H
