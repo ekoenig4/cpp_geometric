@@ -11,7 +11,18 @@ namespace TorchUtils
 {
     Eigen::MatrixXf to_eigen(std::vector<std::vector<float>> data);
     void print_matrix(const Eigen::MatrixXf mat, std::string name = "array");
-    void print_vector(const std::vector<float> vec, std::string name = "array");
+
+    template <typename T>
+    void print_vector(const std::vector<T> vec, std::string name = "array")
+    {
+        int m = vec.size();
+        std::cout << name << "(" << m << "): {" << std::endl;
+        for (int j = 0; j < m; j++)
+        {
+            std::cout << vec[j] << ",";
+        }
+        printf("\n}\n");
+    }
     /**
      * @brief Compute the chi2 sum for all the elements
      *

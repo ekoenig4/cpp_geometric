@@ -8,6 +8,7 @@
 
 #include "TorchUtils.h"
 #include "GCNConv.h"
+#include "Dataset.h"
 
 using namespace std;
 using namespace Eigen;
@@ -153,11 +154,24 @@ void test_ScatterAdd()
   TorchUtils::print_matrix(out);
 }
 
+void test_Dataset()
+{
+  printf("Testing TorchUtils::Dataset...\n");
+
+  TorchUtils::Dataset dataset("../data_csv");
+
+  cout << "Loaded in " << dataset.size() << " graphs." << endl;
+  TorchUtils::Graph g = dataset[0];
+  g.print();
+  printf("Finished Testing TorchUtils::Dataset\n");
+}
+
 int main()
 {
   // test_Linear();
-  test_GCNConv();
+  // test_GCNConv();
   // test_Eigen();
   // test_Slicing();
   // test_ScatterAdd();
+  test_Dataset();
 }

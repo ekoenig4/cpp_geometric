@@ -129,11 +129,8 @@ $(LIB)$(SONAME): $(OBJS)
 
 
 $(BIN)%$(BinSuf): $(PRG)%$(PrgSuf) $(HDRS) $(LIB)$(SONAME)
-	$(CPP) $<  -l$(SONAME2) $(CPPFLAGS) $(GLIBS) -L$(LIB) $(BOOSTLIBFLAG) -o $@
+	$(CPP) $< $(CPPFLAGS) $(GLIBS) $(BOOSTLIBFLAG) $(OBJS) -o $@
 
 
 clean:
 	rm -f $(OBJ)*$(ObjSuf)  $(OBJ)mydict* $(BIN)*$(BinSuf) $(LIB)*$(LibSuf) 
-
-torch: $(BIN)/test_torch_gnn.exe 
-	./$(BIN)/test_torch_gnn.exe

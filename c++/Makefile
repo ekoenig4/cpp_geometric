@@ -12,5 +12,3 @@ exe:
 	$(MAKE) -C $(SRC) exe
 test:
 	$(MAKE) -C $(SRC) test
-torch:
-	$(MAKE) -C $(SRC) torch

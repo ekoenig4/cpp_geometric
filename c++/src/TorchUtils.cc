@@ -22,17 +22,6 @@ void TorchUtils::print_matrix(const MatrixXf mat, string name)
     cout << "--------------------" << endl << endl;
 }
 
-void TorchUtils::print_vector(const vector<float> vec, string name)
-{
-    int m = vec.size();
-    cout << name << "(" << m << "): {" << endl;
-    for (int j = 0; j < m; j++)
-    {
-        printf("%f,", vec[j]);
-    }
-    printf("\n}\n");
-}
-
 void TorchUtils::compare_matrix(const MatrixXf true_mat, const MatrixXf test)
 {
     int m = true_mat.cols();
