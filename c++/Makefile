@@ -1,14 +1,20 @@
 SRC=src
 
-.PHONY: all clean cleandict exe test
+.PHONY: all clean cleandict exe test proj
 
-all:
+
+all: 
 	$(MAKE) -C $(SRC)
-cleandict:
+cleandict: 
 	$(MAKE) -C $(SRC) cleandict
-clean:
+clean: 
 	$(MAKE) -C $(SRC) clean
-exe:
+exe: 
 	$(MAKE) -C $(SRC) exe
-test:
+test: 
 	$(MAKE) -C $(SRC) test
+	
+proj: 
+	mkdir -p bin
+	mkdir -p obj
+	mkdir -p lib
