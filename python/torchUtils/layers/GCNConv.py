@@ -11,15 +11,27 @@ class GCNConv(MessagePassing):
         super(GCNConv, self).__init__(aggr='add')
         self.linear = torch.nn.Linear(2*n_in_node+n_in_edge, n_out)
 
-    def forward(self, x, edge_index, edge_attr):
-        self.messages = []
+    def forward(self, x: Union[Tensor, PairTensor], edge_index: Adj, edge_attr: Optional[Tensor]) -> Tensor:
         return self.propagate(edge_index, x=x, edge_attr=edge_attr)
 
-    def message(self, x_i, x_j, edge_attr):
-        out = torch.cat([x_i, x_j-x_i, edge_attr], dim=1)
-        out = self.linear(out)
-        self.messages.append((x_i,x_j,edge_attr,out))
-        return out
+    def message(self, x_i: Tensor, x_j: Tensor, edge_attr: Tensor) -> Tensor:
+        self.msg = torch.cat([x_i, x_j-x_i, edge_attr], dim=1)
+        self.msg = self.linear(self.msg)
+        return self.msg
 
     def update(self, aggr_out):
         return aggr_out
+    
+class GCNConvMSG(GCNConv):
+    def __init__(self,n_in_node, n_in_edge, n_out):
+        super(GCNConvMSG, self).__init__(n_in_node, n_in_edge, n_out)
+        self.edge_aggr = lambda tensor: tensor.max(dim=-1)[0]
+
+    def forward(self, x: Union[Tensor, PairTensor], edge_index: Adj, edge_attr: Optional[Tensor]) -> Tensor:
+        x = self.propagate(edge_index,x=x,edge_attr=edge_attr)
+        
+        edge_attr = torch.cat([x[edge_index[1]], x[edge_index[0]], self.msg], dim=-1)
+        
+        # edge_attr = torch.cat([x[edge_index[1]][:, :, None], x[edge_index[0]][:, :, None], self.msg[:, :, None]], dim=-1)
+        # edge_attr = self.edge_aggr(edge_attr)
+        return x,edge_attr
