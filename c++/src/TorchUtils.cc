@@ -6,9 +6,17 @@ using namespace Eigen;
 Eigen::MatrixXf TorchUtils::to_eigen(std::vector<std::vector<float>> data)
 {
     Eigen::MatrixXf eMatrix(data.size(), data[0].size());
-    for (int i = 0; i < data.size(); ++i)
+    for (unsigned int i = 0; i < data.size(); ++i)
         eMatrix.row(i) = Eigen::VectorXf::Map(&data[i][0], data[0].size());
     return eMatrix;
+}
+
+void TorchUtils::print_shape(const MatrixXf mat, string name)
+{
+    int n = mat.rows();
+    int m = mat.cols();
+
+    cout << name << "(" << n << "," << m << "): " << endl;
 }
 
 void TorchUtils::print_matrix(const MatrixXf mat, string name)
@@ -24,6 +32,13 @@ void TorchUtils::print_matrix(const MatrixXf mat, string name)
 
 void TorchUtils::compare_matrix(const MatrixXf true_mat, const MatrixXf test)
 {
+    float compare = matrix_difference(true_mat, test);
+    printf("Matrix Element Comparison to True: %f\n", compare);
+}
+
+float TorchUtils::matrix_difference(const MatrixXf true_mat, const MatrixXf test)
+{
+
     int m = true_mat.cols();
     int n = true_mat.rows();
 
@@ -33,7 +48,32 @@ void TorchUtils::compare_matrix(const MatrixXf true_mat, const MatrixXf test)
     }
 
     float compare = (true_mat - test).squaredNorm();
-    printf("Matrix Element Comparison to True: %f\n", compare);
+    return compare;
+}
+
+void initialize_weights(MatrixXf &weights)
+{
+    int rows = weights.rows();
+    int cols = weights.cols();
+
+    vector<vector<float>> weight_init;
+    for (int i = 0; i < rows; i++)
+    {
+        vector<float> init;
+        for (int j = 0; j < cols; j++)
+        {
+            float elem = (i * cols + j + 1.0) / (rows * cols);
+            init.push_back(elem);
+        }
+        weight_init.push_back(init);
+    }
+    weights = TorchUtils::to_eigen(weight_init);
+}
+
+void TorchUtils::initialize_layer(Layer &layer)
+{
+    initialize_weights(layer.weights);
+    initialize_weights(layer.bias);
 }
 
 void TorchUtils::Layer::set_weights(vector<vector<float>> weights)
@@ -98,8 +138,8 @@ TorchUtils::Linear::Linear(int n, int m) : Layer()
     name = "linear";
     n_in = n;
     n_out = m;
-    weights = MatrixXf(n, m);
-    bias = MatrixXf(m, 1);
+    weights = MatrixXf(m, n);
+    bias = MatrixXf(1, m);
 }
 
 void TorchUtils::Linear::apply(MatrixXf &x)

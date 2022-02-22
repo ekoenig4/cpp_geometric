@@ -6,12 +6,12 @@
 #include <Eigen/Dense>
 #include <Eigen/Core>
 
-#include "TorchUtils.h"
-#include "GCNConv.h"
-#include "Dataset.h"
+#include "cpp_geometric.h"
 
 using namespace std;
 using namespace Eigen;
+
+TorchUtils::Dataset dataset("../data_csv");
 
 const vector<vector<float>> test_x = {{0.0512, 0.0819, 0.5242, 0.8290, 0.6909},
                                       {0.0664, 0.0803, 0.4328, 0.1801, 0.1115},
@@ -158,12 +158,77 @@ void test_Dataset()
 {
   printf("Testing TorchUtils::Dataset...\n");
 
-  TorchUtils::Dataset dataset("../data_csv");
-
   cout << "Loaded in " << dataset.size() << " graphs." << endl;
-  TorchUtils::Graph g = dataset[0];
+  TorchUtils::Graph g = dataset.at(0);
   g.print();
   printf("Finished Testing TorchUtils::Dataset\n");
+}
+
+void test_Extra_Dataset()
+{
+  printf("Testing TorchUtils::Dataset::load_extra...\n");
+
+  dataset.load_extra("gcnconvmsg");
+
+  cout << "Loaded in " << dataset.size() << " graphs." << endl;
+
+  MatrixXf node_x, edge_attr;
+  dataset[0].get_extra("gcnconvmsg", node_x, edge_attr);
+
+  TorchUtils::print_matrix(node_x, "GCNConvMSG::node_o");
+  TorchUtils::print_matrix(edge_attr, "GCNConvMSG::edge_o");
+
+  printf("Finished Testing TorchUtils::Dataset::load_extra\n");
+}
+
+void test_Init_Layer()
+{
+  printf("Testing TorchUtils::Layer Init...\n");
+  TorchUtils::GCNConv conv(5, 1, 2);
+
+  printf("Pre Init...\n");
+  conv.print_parameters();
+
+  TorchUtils::initialize_layer(conv);
+  printf("Post Init...\n");
+  conv.print_parameters();
+
+  printf("Finished Testing TorchUtils::Layer Init\n");
+}
+
+void test_GCNConvMSG()
+{
+  char test[] = "TorchUtils::GCNConvMSG";
+  printf("Testing %s...\n", test);
+
+  printf("Loading extra dataset...\n");
+  dataset.load_extra("gcnconvmsg");
+
+  printf("Initialize GCNConvMSG...\n");
+  TorchUtils::GCNConvMSG conv(5, 1, 2);
+  TorchUtils::initialize_layer(conv);
+
+  printf("Processesing %i Graphs...\n", (int)dataset.size());
+  float node_error = 0;
+  float edge_error = 0;
+  for (unsigned i = 0; i < dataset.size(); i++)
+  {
+    TorchUtils::Graph g = dataset[i];
+    MatrixXf node_o = g.node_x;
+    MatrixXf edge_o = g.edge_attr;
+    conv.apply(node_o, g.edge_index, edge_o);
+
+    MatrixXf node_targ, edge_targ;
+    g.get_extra("gcnconvmsg", node_targ, edge_targ);
+
+    node_error += TorchUtils::matrix_difference(node_targ,node_o);
+    edge_error += TorchUtils::matrix_difference(edge_targ, edge_o);
+  }
+
+  printf("--- Node Error: %f\n", node_error);
+  printf("--- Edge Error: %f\n", edge_error);
+
+  printf("Finished Testing %s\n", test);
 }
 
 int main()
@@ -173,5 +238,8 @@ int main()
   // test_Eigen();
   // test_Slicing();
   // test_ScatterAdd();
-  test_Dataset();
+  // test_Dataset();
+  // test_Extra_Dataset();
+  // test_Init_Layer();
+  test_GCNConvMSG();
 }

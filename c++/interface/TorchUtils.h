@@ -10,6 +10,7 @@
 namespace TorchUtils
 {
     Eigen::MatrixXf to_eigen(std::vector<std::vector<float>> data);
+    void print_shape(const Eigen::MatrixXf mat, std::string name = "array");
     void print_matrix(const Eigen::MatrixXf mat, std::string name = "array");
 
     template <typename T>
@@ -30,6 +31,7 @@ namespace TorchUtils
      * @param test matrix to test
      */
     void compare_matrix(const Eigen::MatrixXf true_mat, const Eigen::MatrixXf test);
+    float matrix_difference(const Eigen::MatrixXf true_mat, const Eigen::MatrixXf test);
     void scatter_add(Eigen::MatrixXf &x, std::vector<std::vector<int>> &edge_index, Eigen::MatrixXf &msg);
 
     struct Layer
@@ -44,6 +46,7 @@ namespace TorchUtils
         void set_parameters(std::vector<std::vector<float>> weights, std::vector<std::vector<float>> bias);
         void print_parameters();
     };
+    void initialize_layer(Layer &layer);
 
     struct Linear : public Layer
     {
