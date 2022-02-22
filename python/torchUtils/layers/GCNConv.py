@@ -7,9 +7,12 @@ from torch_geometric.typing import Adj, PairTensor
 
 
 class GCNConv(MessagePassing):
-    def __init__(self, n_in_node, n_in_edge, n_out):
+    def __init__(self, n_in = None, n_out=None, n_in_node=None, n_in_edge=None, ):
         super(GCNConv, self).__init__(aggr='add')
-        self.linear = Linear(2*n_in_node+n_in_edge, n_out)
+        if n_in is None: n_in = 2*n_in_node + n_in_edge
+        self.linear = Linear(n_in, n_out)
+        self.weight = self.linear.weight 
+        self.bias = self.linear.bias
 
     def forward(self, x: Union[Tensor, PairTensor], edge_index: Adj, edge_attr: Tensor) -> Tensor:
         return self.propagate(edge_index, x=x, edge_attr=edge_attr)
@@ -23,8 +26,8 @@ class GCNConv(MessagePassing):
         return aggr_out
     
 class GCNConvMSG(GCNConv):
-    def __init__(self,n_in_node, n_in_edge, n_out):
-        super(GCNConvMSG, self).__init__(n_in_node, n_in_edge, n_out)
+    def __init__(self,n_in = None, n_out=None, n_in_node=None, n_in_edge=None, ):
+        super(GCNConvMSG, self).__init__(n_in, n_out, n_in_node, n_in_edge)
         self.edge_aggr = lambda tensor: tensor.max(dim=-1)[0]
 
     def forward(self, x: Union[Tensor, PairTensor], edge_index: Adj, edge_attr: Tensor) -> Tensor:
