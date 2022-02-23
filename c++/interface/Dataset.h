@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <string>
-#include <fstream>
 #include <vector>
 #include <map>
 
@@ -58,8 +57,6 @@ namespace TorchUtils
         void load_extra(std::string tag);
 
     private:
-        template <typename T>
-        void loadtxt(std::string fname, std::vector<std::vector<T>> &out);
         void load_nodes(std::vector<Eigen::MatrixXf> &node_x);
         void load_edges(std::vector<std::vector<std::vector<int>>> &edge_index,std::vector<Eigen::MatrixXf> &edge_attr);
 

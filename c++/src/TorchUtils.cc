@@ -1,13 +1,15 @@
 #include "TorchUtils.h"
 
+#include "math.h"
+
 using namespace std;
 using namespace Eigen;
 
-Eigen::MatrixXf TorchUtils::to_eigen(std::vector<std::vector<float>> data)
+MatrixXf TorchUtils::to_eigen(std::vector<std::vector<float>> data)
 {
-    Eigen::MatrixXf eMatrix(data.size(), data[0].size());
+    MatrixXf eMatrix(data.size(), data[0].size());
     for (unsigned int i = 0; i < data.size(); ++i)
-        eMatrix.row(i) = Eigen::VectorXf::Map(&data[i][0], data[0].size());
+        eMatrix.row(i) = VectorXf::Map(&data[i][0], data[0].size());
     return eMatrix;
 }
 
@@ -78,8 +80,13 @@ void TorchUtils::initialize_layer(Layer &layer)
 
 void TorchUtils::Layer::set_weights(vector<vector<float>> weights)
 {
-    int m = weights.size();
-    int n = weights[0].size();
+    set_weights(to_eigen(weights));
+}
+
+void TorchUtils::Layer::set_weights(MatrixXf weights)
+{
+    int m = weights.cols();
+    int n = weights.rows();
 
     int n_out = this->weights.cols();
     int n_in = this->weights.rows();
@@ -88,13 +95,18 @@ void TorchUtils::Layer::set_weights(vector<vector<float>> weights)
         printf("Expected weights(%i,%i), but got weights(%i,%i)\n", n_out, n_in, m, n);
     }
 
-    this->weights = to_eigen(weights);
+    this->weights = weights;
 }
 
 void TorchUtils::Layer::set_bias(vector<vector<float>> bias)
 {
-    int m = bias.size();
-    int n = bias[0].size();
+    set_bias(to_eigen(bias));
+}
+
+void TorchUtils::Layer::set_bias(MatrixXf bias)
+{
+    int m = bias.cols();
+    int n = bias.rows();
 
     int n_out = this->bias.cols();
     int n_in = this->bias.rows();
@@ -103,7 +115,7 @@ void TorchUtils::Layer::set_bias(vector<vector<float>> bias)
         printf("Expected bias(%i,%i), but got bias(%i,%i)\n", n_out, n_in, m, n);
     }
 
-    this->bias = to_eigen(bias);
+    this->bias = bias;
 }
 
 void TorchUtils::Layer::set_parameters(vector<vector<float>> weights, vector<vector<float>> bias)
@@ -112,30 +124,28 @@ void TorchUtils::Layer::set_parameters(vector<vector<float>> weights, vector<vec
     set_bias(bias);
 }
 
+void TorchUtils::Layer::set_parameters(MatrixXf weights, MatrixXf bias)
+{
+    set_weights(weights);
+    set_bias(bias);
+}
+
 void TorchUtils::Layer::print_parameters()
 {
-    cout << "Layer: " << name << endl;
+    cout << "Layer: " << name() << endl;
     print_matrix(weights, "--weights");
     print_matrix(bias, "--bias");
 }
 
-void TorchUtils::ReLu::apply(MatrixXf &x)
+void TorchUtils::Layer::print_shapes()
 {
-    int rows = x.rows();
-    int cols = x.cols();
-    for (int i = 0; i < rows; i++)
-    {
-        for (int j = 0; j < cols; j++)
-        {
-            if (x(i,j) < 0)
-                x(i, j) = 0;
-        }
-    }
+    cout << "Layer: " << name() << endl;
+    print_shape(weights, "--weights");
+    print_shape(bias, "--bias");
 }
 
 TorchUtils::Linear::Linear(int n, int m) : Layer()
 {
-    name = "linear";
     n_in = n;
     n_out = m;
     weights = MatrixXf(m, n);
@@ -148,7 +158,12 @@ void TorchUtils::Linear::apply(MatrixXf &x)
     x = x * weights.transpose() + MatrixXf::Ones(x.rows(), 1) * bias;
 }
 
-void TorchUtils::scatter_add(Eigen::MatrixXf &x, vector<vector<int>> &edge_index, Eigen::MatrixXf &msg)
+void TorchUtils::Linear::apply(MatrixXf &x, vector<vector<int>> &edge_index, MatrixXf &edge_attr)
+{
+    apply(x);
+}
+
+void TorchUtils::scatter_add(MatrixXf &x, vector<vector<int>> &edge_index, MatrixXf &msg)
 {
     vector<int> dest = edge_index[1];
 
@@ -164,4 +179,37 @@ void TorchUtils::scatter_add(Eigen::MatrixXf &x, vector<vector<int>> &edge_index
         }
     }
     x = out;
+}
+
+void TorchUtils::relu(MatrixXf &x)
+{
+    int rows = x.rows();
+    int cols = x.cols();
+    for (int i = 0; i < rows; i++)
+    {
+        for (int j = 0; j < cols; j++)
+        {
+            if (x(i,j) < 0)
+                x(i, j) = 0;
+        }
+    }
+}
+
+void TorchUtils::log_softmax(MatrixXf &x)
+{
+    int rows = x.rows();
+    int cols = x.cols();
+    for (int i = 0; i < rows; i++)
+    {
+        float norm = 0.0;
+        for (int j = 0; j < cols; j++)
+        {
+            norm += exp(x(i, j));
+        }
+
+        for (int j = 0; j < cols; j++)
+        {
+            x(i, j) = log(exp(x(i, j)) / norm);
+        }
+    }
 }

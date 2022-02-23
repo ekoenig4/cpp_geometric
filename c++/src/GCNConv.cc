@@ -3,20 +3,12 @@
 using namespace std;
 using namespace Eigen;
 
-TorchUtils::GCNConv::GCNConv(int n_in_node, int n_in_edge, int n_out) : Linear(2*n_in_node+n_in_edge,n_out)
-{
-    this->name = "GCNConv";
-    this->n_in_node = n_in_node;
-    this->n_in_edge = n_in_edge;
-    this->n_out = n_out;
-}
-
-void TorchUtils::GCNConv::apply(Eigen::MatrixXf &x, vector<vector<int>> &edge_index, Eigen::MatrixXf &edge_attr)
+void TorchUtils::GCNConv::apply(MatrixXf &x, vector<vector<int>> &edge_index, MatrixXf &edge_attr)
 {
     propagate(x, edge_index, edge_attr);
 }
 
-Eigen::MatrixXf TorchUtils::GCNConv::message(Eigen::MatrixXf &x, vector<vector<int>> &edge_index, Eigen::MatrixXf &edge_attr)
+MatrixXf TorchUtils::GCNConv::message(MatrixXf &x, vector<vector<int>> &edge_index, MatrixXf &edge_attr)
 {
     vector<int> src = edge_index[0];
     vector<int> dest = edge_index[1];
@@ -32,12 +24,12 @@ Eigen::MatrixXf TorchUtils::GCNConv::message(Eigen::MatrixXf &x, vector<vector<i
     msg << x_i, x_j - x_i, edge_attr;
 
     // Apply linear layer to msg as defined by constructor
-    Linear::apply(msg);
+    apply(msg);
 
     return msg;
 }
 
-void TorchUtils::GCNConv::aggregate(Eigen::MatrixXf &x, vector<vector<int>> &edge_index, Eigen::MatrixXf &edge_attr, Eigen::MatrixXf &msg)
+void TorchUtils::GCNConv::aggregate(MatrixXf &x, vector<vector<int>> &edge_index, MatrixXf &edge_attr, MatrixXf &msg)
 {
     /**
      * @brief Currently using add aggregate function
@@ -47,13 +39,13 @@ void TorchUtils::GCNConv::aggregate(Eigen::MatrixXf &x, vector<vector<int>> &edg
     scatter_add(x, edge_index, msg);
 }
 
-void TorchUtils::GCNConv::propagate(Eigen::MatrixXf &x, vector<vector<int>> &edge_index, Eigen::MatrixXf &edge_attr)
+void TorchUtils::GCNConv::propagate(MatrixXf &x, vector<vector<int>> &edge_index, MatrixXf &edge_attr)
 {
-    Eigen::MatrixXf msg = message(x, edge_index, edge_attr);
+    MatrixXf msg = message(x, edge_index, edge_attr);
     aggregate(x, edge_index, edge_attr, msg);
 }
 
-void TorchUtils::GCNConvMSG::apply(Eigen::MatrixXf &x, vector<vector<int>> &edge_index, Eigen::MatrixXf &edge_attr)
+void TorchUtils::GCNConvMSG::apply(MatrixXf &x, vector<vector<int>> &edge_index, MatrixXf &edge_attr)
 {
     propagate(x,edge_index,edge_attr);
 
@@ -66,4 +58,26 @@ void TorchUtils::GCNConvMSG::apply(Eigen::MatrixXf &x, vector<vector<int>> &edge
 
     edge_attr = MatrixXf(n_edges, 3 * n_out);
     edge_attr << x_i, x_j, msg;
+}
+
+void TorchUtils::NodeLinear::apply(MatrixXf &x, vector<vector<int>> &edge_index, MatrixXf &edge_attr)
+{
+    apply(x);
+}
+
+void TorchUtils::EdgeLinear::apply(MatrixXf &x, vector<vector<int>> &edge_index, MatrixXf &edge_attr)
+{
+    apply(edge_attr);
+}
+
+void TorchUtils::GCNRelu::apply(MatrixXf &x, vector<vector<int>> &edge_index, MatrixXf &edge_attr)
+{
+    apply(x);
+    apply(edge_attr);
+}
+
+void TorchUtils::GCNLogSoftmax::apply(MatrixXf &x, vector<vector<int>> &edge_index, MatrixXf &edge_attr)
+{
+    apply(x);
+    apply(edge_attr);
 }

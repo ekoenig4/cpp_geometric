@@ -231,6 +231,117 @@ void test_GCNConvMSG()
   printf("Finished Testing %s\n", test);
 }
 
+void test_GeoModel_conv1()
+{
+  char test[] = "TorchUtils::GeoModel::Conv1";
+  printf("Testing %s...\n", test);
+
+  printf("Loading model...\n");
+  TorchUtils::GeoModel model("../gnn_model");
+  model.print();
+
+  dataset.load_extra("golden_conv1");
+
+  printf("Processesing %i Graphs...\n", (int)dataset.size());
+  float node_error = 0;
+  float edge_error = 0;
+  for (TorchUtils::Graph g : dataset)
+  {
+    Eigen::MatrixXf node_targ, edge_targ;
+    g.get_extra("golden_conv1",node_targ,edge_targ);
+
+    MatrixXf node_o = g.node_x;
+    MatrixXf edge_o = g.edge_attr;
+    model.sequence[0]->apply(node_o, g.edge_index, edge_o);
+
+    node_error += TorchUtils::matrix_difference(node_targ,node_o);
+    edge_error += TorchUtils::matrix_difference(edge_targ, edge_o);
+  }
+
+  printf("--- Node Error: %f\n", node_error);
+  printf("--- Edge Error: %f\n", edge_error);
+  printf("Finished Testing %s\n", test);
+
+}
+void test_GeoModel()
+{
+  char test[] = "TorchUtils::GeoModel";
+  printf("Testing %s...\n", test);
+
+  printf("Loading model...\n");
+  TorchUtils::GeoModel model("../gnn_model");
+  model.print();
+
+  dataset.load_extra("golden");
+
+  printf("Processesing %i Graphs...\n", (int)dataset.size());
+  float node_error = 0;
+  float edge_error = 0;
+  for (TorchUtils::Graph g : dataset)
+  {
+    Eigen::MatrixXf node_targ, edge_targ;
+    g.get_extra("golden",node_targ,edge_targ);
+
+    MatrixXf node_o = g.node_x;
+    MatrixXf edge_o = g.edge_attr;
+    model.apply(node_o, g.edge_index, edge_o);
+
+    node_error += TorchUtils::matrix_difference(node_targ,node_o);
+    edge_error += TorchUtils::matrix_difference(edge_targ, edge_o);
+  }
+
+  printf("--- Node Error: %f\n", node_error);
+  printf("--- Edge Error: %f\n", edge_error);
+  printf("Finished Testing %s\n", test);
+
+}
+
+void test_GCNRelu()
+{
+  
+  char test[] = "TorchUtils::GCNRelu";
+  printf("Testing %s...\n", test);
+
+  TorchUtils::GCNRelu relu;
+  
+  printf("Processesing %i Graphs...\n", (int)dataset.size());
+  for (unsigned i = 0; i < dataset.size(); i++)
+  {
+    TorchUtils::Graph g = dataset[i];
+    MatrixXf node_o = -1*g.node_x;
+    MatrixXf edge_o = g.edge_attr;
+
+    TorchUtils::print_matrix(node_o,"Negative Input");
+    relu.apply(node_o, g.edge_index, edge_o);
+    TorchUtils::print_matrix(node_o,"Relu Output");
+    break;
+  }
+  printf("Finished Testing %s\n", test);
+}
+
+void test_GCNLogSoftmax()
+{
+  
+  char test[] = "TorchUtils::GCNLogSoftmax";
+  printf("Testing %s...\n", test);
+
+  TorchUtils::GCNLogSoftmax log_softmax;
+  
+  printf("Processesing %i Graphs...\n", (int)dataset.size());
+  for (unsigned i = 0; i < dataset.size(); i++)
+  {
+    TorchUtils::Graph g = dataset[i];
+    MatrixXf node_o = g.node_x;
+    MatrixXf edge_o = g.edge_attr;
+
+    TorchUtils::print_matrix(node_o,"Input");
+    log_softmax.apply(node_o, g.edge_index, edge_o);
+    TorchUtils::print_matrix(node_o,"log_softmax Output");
+    break;
+  }
+  printf("Finished Testing %s\n", test);
+}
+
 int main()
 {
   // test_Linear();
@@ -241,5 +352,7 @@ int main()
   // test_Dataset();
   // test_Extra_Dataset();
   // test_Init_Layer();
-  test_GCNConvMSG();
+  // test_GCNConvMSG();
+  // test_GCNLogSoftmax();
+  test_GeoModel();
 }

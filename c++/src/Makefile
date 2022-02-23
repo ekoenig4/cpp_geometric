@@ -38,9 +38,9 @@ TFINC=-I/cvmfs/cms.cern.ch/slc7_amd64_gcc700/external/eigen/64060da8461a627eb25b
 
 ARCHL = -m64
 CXX  =  g++
-CXXFLAGS  = $(ROOTCFLAGS) -Wall -O -fPIC -I$(HDR) $(TFINC)
+CXXFLAGS  = $(ROOTCFLAGS) -Wall -O -fPIC -I$(HDR) $(TFINC) -std=c++11 -g
 CPP  =  g++
-CPPFLAGS  = $(ROOTCFLAGS) -Wall  $(ARCHL) -I$(HDR) $(TFINC)
+CPPFLAGS  = $(ROOTCFLAGS) -Wall  $(ARCHL) -I$(HDR) $(TFINC) -std=c++11 -g
 
 F    = gfortran
 FFLAGS = -c

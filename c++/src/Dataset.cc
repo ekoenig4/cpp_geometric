@@ -1,7 +1,6 @@
 #include "Dataset.h"
 
-// #include "TorchUtils.h"
-#include <cstring>
+#include "TorchUtils.h"
 
 using namespace std;
 using namespace Eigen;
@@ -130,28 +129,3 @@ void TorchUtils::Dataset::load_extra_edges(string tag, vector<MatrixXf> &edge_at
     }
 }
 
-template <typename T>
-void TorchUtils::Dataset::loadtxt(string fname, vector<vector<T>> &out)
-{
-    ifstream file(fname);
-    if (!file.is_open())
-        throw runtime_error("Could not open file: " + fname);
-
-    string line, word;
-    string delim = " ";
-
-    while (getline(file, line))
-    {
-        size_t pos = 0;
-        string token;
-        vector<T> vec;
-        while ((pos = line.find(delim)) != string::npos)
-        {
-            token = line.substr(0, pos);
-            vec.push_back(stof(token));
-            line.erase(0, pos + delim.length());
-        }
-        vec.push_back(stof(line));
-        out.push_back(vec);
-    }
-}

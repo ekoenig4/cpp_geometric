@@ -31,8 +31,8 @@ class GeoModel:
 
         with open(f"{self.root}/model.cfg", "r") as f:
             self.cfg.read_file(f)
-        layers = self.cfg["model"]["layers"].split(' ')
-        shapes = self.cfg["model"]["layer_shapes"].split(' ')
+        layers = self.cfg["model"]["layers"].split(',')
+        shapes = self.cfg["model"]["layer_shapes"].split(',')
         shapes = np.array(list(zip(shapes[::2], shapes[1::2])), dtype=int)
 
         weights = _get_weights(self.root, shapes)

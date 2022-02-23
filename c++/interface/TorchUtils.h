@@ -4,11 +4,38 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <fstream>
 
 #include <Eigen/Dense>
 
 namespace TorchUtils
 {
+    template <typename T>
+    void loadtxt(std::string fname, std::vector<std::vector<T>> &out)
+    {
+        std::ifstream file(fname);
+        if (!file.is_open())
+            throw std::runtime_error("Could not open file: " + fname);
+
+        std::string line, word;
+        std::string delim = " ";
+
+        while (std::getline(file, line))
+        {
+            size_t pos = 0;
+            std::string token;
+            std::vector<T> vec;
+            while ((pos = line.find(delim)) != std::string::npos)
+            {
+                token = line.substr(0, pos);
+                vec.push_back(stof(token));
+                line.erase(0, pos + delim.length());
+            }
+            vec.push_back(stof(line));
+            out.push_back(vec);
+        }
+    }
+
     Eigen::MatrixXf to_eigen(std::vector<std::vector<float>> data);
     void print_shape(const Eigen::MatrixXf mat, std::string name = "array");
     void print_matrix(const Eigen::MatrixXf mat, std::string name = "array");
@@ -36,15 +63,20 @@ namespace TorchUtils
 
     struct Layer
     {
-        std::string name = "layer";
         Eigen::MatrixXf weights;
         Eigen::MatrixXf bias;
 
-        void apply(Eigen::MatrixXf &x);
+        virtual std::string name() { return "Layer"; }
+        virtual void apply(Eigen::MatrixXf &x) = 0;
+        virtual void apply(Eigen::MatrixXf &x, std::vector<std::vector<int>> &edge_index, Eigen::MatrixXf &edge_attr) = 0;
         void set_weights(std::vector<std::vector<float>> weights);
+        void set_weights(Eigen::MatrixXf weights);
         void set_bias(std::vector<std::vector<float>> bias);
+        void set_bias(Eigen::MatrixXf bias);
         void set_parameters(std::vector<std::vector<float>> weights, std::vector<std::vector<float>> bias);
+        void set_parameters(Eigen::MatrixXf weights, Eigen::MatrixXf bias);
         void print_parameters();
+        void print_shapes();
     };
     void initialize_layer(Layer &layer);
 
@@ -60,12 +92,13 @@ namespace TorchUtils
          * @param m number of output features
          */
         Linear(int n, int m);
+        
         void apply(Eigen::MatrixXf &x);
+        void apply(Eigen::MatrixXf &x, std::vector<std::vector<int>> &edge_index, Eigen::MatrixXf &edge_attr);
+        std::string name() { return "Linear"; }
     };
 
-    struct ReLu : public Layer
-    {
-        void apply(Eigen::MatrixXf &x);
-    };
+    void relu(Eigen::MatrixXf &x);
+    void log_softmax(Eigen::MatrixXf &x);
 }
 #endif // TORHCUTILS_H
