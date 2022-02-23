@@ -8,6 +8,11 @@ TorchUtils::GeoModel::GeoModel(string root)
     this->root = root;
     cfg.init(root + "/model.cfg");
 
+    node_scale_min = cfg.readFloatListOpt("scaler", "node_scale_min");
+    node_scale_max = cfg.readFloatListOpt("scaler", "node_scale_max");
+    edge_scale_min = cfg.readFloatListOpt("scaler", "edge_scale_min");
+    edge_scale_max = cfg.readFloatListOpt("scaler", "edge_scale_max");
+
     vector<string> layers = cfg.readStringListOpt("model", "layers");
     vector<int> f_shapes = cfg.readIntListOpt("model", "layer_shapes");
     vector<vector<int>> shapes;
@@ -69,6 +74,50 @@ void TorchUtils::GeoModel::apply(MatrixXf &x, vector<vector<int>> &edge_index, M
     {
         layer->apply(x, edge_index, edge_attr);
     }
+}
+
+void TorchUtils::GeoModel::scale(MatrixXf &x, MatrixXf &edge_attr)
+{
+    for (unsigned int i = 0; i < node_scale_min.size(); i++)
+    {
+        for (unsigned int j = 0; j < x.rows(); j++)
+        {
+            x(j, i) = (x(j, i) - node_scale_min[i]) / (node_scale_max[i] - node_scale_min[i]);
+        }
+    }
+
+    for (unsigned int i = 0; i < edge_scale_min.size(); i++)
+    {
+        for (unsigned int j = 0; j < edge_attr.rows(); j++)
+        {
+            edge_attr(j, i) = (edge_attr(j, i) - edge_scale_min[i]) / (edge_scale_max[i] - edge_scale_min[i]);
+        }
+    }
+}
+
+tuple<vector<float>,vector<float>> TorchUtils::GeoModel::evaluate(vector<vector<float>> &x, vector<vector<int>> &edge_index, vector<vector<float>> &edge_attr)
+{
+    MatrixXf m_node_o = to_eigen(x);
+    MatrixXf m_edge_o = to_eigen(edge_attr);
+    return evaluate(m_node_o,edge_index,m_edge_o);
+}
+tuple<vector<float>,vector<float>> TorchUtils::GeoModel::evaluate(MatrixXf &x, vector<vector<int>> &edge_index, MatrixXf &edge_attr)
+{
+    scale(x, edge_attr);
+    apply(x, edge_index, edge_attr);
+
+    vector<float> node_o(x.rows());
+    for (unsigned int i = 0; i < x.rows(); i++)
+    {
+        node_o[i] = exp(x(i, 1));
+    }
+
+    vector<float> edge_o(edge_attr.rows());
+    for (unsigned int i = 0; i < edge_attr.rows(); i++)
+    {
+        edge_o[i] = exp(edge_attr(i, 1));
+    }
+    return make_tuple(node_o, edge_o);
 }
 
 void TorchUtils::GeoModel::print()

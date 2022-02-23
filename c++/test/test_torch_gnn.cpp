@@ -99,7 +99,7 @@ void test_GCNConv()
 }
 
 void test_Eigen()
-{
+{  
   std::vector<std::vector<float>> x = test_x;
   MatrixXf mat_x = TorchUtils::to_eigen(x);
   TorchUtils::print_matrix(mat_x, "org");
@@ -342,6 +342,97 @@ void test_GCNLogSoftmax()
   printf("Finished Testing %s\n", test);
 }
 
+void test_GeoModel_Scale()
+{
+
+  char test[] = "TorchUtils::GeoModel::scale";
+  printf("Testing %s...\n", test);
+
+  printf("Loading model...\n");
+  TorchUtils::GeoModel model("../gnn_model");
+  model.print();
+
+  dataset.load_extra("unscaled");
+  printf("Processesing %i Graphs...\n", (int)dataset.size());
+  float node_error, edge_error;
+  node_error = edge_error = 0;
+  for (TorchUtils::Graph g : dataset)
+  {
+    Eigen::MatrixXf node_o, edge_o;
+    g.get_extra("unscaled",node_o,edge_o);
+
+    MatrixXf node_targ = g.node_x;
+    MatrixXf edge_targ = g.edge_attr;
+    model.scale(node_o, edge_o);
+
+    node_error += TorchUtils::matrix_difference(node_targ,node_o);
+    edge_error += TorchUtils::matrix_difference(edge_targ, edge_o);
+  }
+
+  printf("--- Node Error: %f\n", node_error);
+  printf("--- Edge Error: %f\n", edge_error);
+  printf("Finished Testing %s\n", test);
+}
+
+float vector_difference(vector<float> targ, vector<float> test)
+{
+  float error = 0;
+  for (unsigned int i = 0; i < targ.size(); i++)
+  {
+    error += (targ[i] - test[i]) * (targ[i] - test[i]);
+  }
+  return error;
+}
+
+void test_GeoModel_Evaluate()
+{
+
+  char test[] = "TorchUtils::GeoModel::evaluate";
+  printf("Testing %s...\n", test);
+
+  printf("Loading model...\n");
+  TorchUtils::GeoModel model("../gnn_model");
+  model.print();
+
+  dataset.load_extra("unscaled");
+  dataset.load_extra("golden");
+  printf("Processesing %i Graphs...\n", (int)dataset.size());
+  float node_error, edge_error;
+  node_error = edge_error = 0;
+  for (TorchUtils::Graph g : dataset)
+  {
+    Eigen::MatrixXf node_o, edge_o;
+    g.get_extra("unscaled",node_o,edge_o);
+
+    MatrixXf m_node_targ, m_edge_targ;
+    g.get_extra("golden", m_node_targ, m_edge_targ);
+
+    vector<float> node_targ(m_node_targ.rows());
+    for (unsigned int i = 0; i < m_node_targ.rows(); i++)
+    {
+      node_targ[i] = exp(m_node_targ(i, 1));
+    }
+
+    vector<float> edge_targ(m_edge_targ.rows());
+    for (unsigned int i = 0; i < m_edge_targ.rows(); i++)
+    {
+      edge_targ[i] = exp(m_edge_targ(i, 1));
+    }
+
+      tuple<vector<float>, vector<float>> pred = model.evaluate(node_o, g.edge_index, edge_o);
+
+    vector<float> node_pred = get<0>(pred);
+    vector<float> edge_pred = get<1>(pred);
+
+    node_error += vector_difference(node_targ,node_pred);
+    edge_error += vector_difference(edge_targ, edge_pred);
+  }
+
+  printf("--- Node Error: %f\n", node_error);
+  printf("--- Edge Error: %f\n", edge_error);
+  printf("Finished Testing %s\n", test);
+}
+
 int main()
 {
   // test_Linear();
@@ -354,5 +445,7 @@ int main()
   // test_Init_Layer();
   // test_GCNConvMSG();
   // test_GCNLogSoftmax();
-  test_GeoModel();
+  // test_GeoModel();
+  // test_GeoModel_Scale();
+  test_GeoModel_Evaluate();
 }

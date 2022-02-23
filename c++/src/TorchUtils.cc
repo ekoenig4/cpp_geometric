@@ -5,7 +5,7 @@
 using namespace std;
 using namespace Eigen;
 
-MatrixXf TorchUtils::to_eigen(std::vector<std::vector<float>> data)
+MatrixXf TorchUtils::to_eigen(vector<vector<float>> data)
 {
     MatrixXf eMatrix(data.size(), data[0].size());
     for (unsigned int i = 0; i < data.size(); ++i)
