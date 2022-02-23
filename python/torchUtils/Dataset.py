@@ -50,4 +50,13 @@ class Dataset(list):
         
         for graph in zip(node_x,edge_index,edge_attr):
             self.append(_build_graph(*graph) )
+            
+    def load_extra(self,tag):
+        node_x = _load_extra_nodes(self.root,tag)
+        edge_attr = _load_extra_edges(self.root,tag)
+        
+        for graph,x,attr in zip(self,node_x,edge_attr):
+            setattr(graph,f"{tag}_x",x)
+            setattr(graph,f"{tag}_edge_attr",attr)
+            
         
