@@ -2,7 +2,7 @@ from typing import Callable, Optional, Union
 
 import torch
 from torch import Tensor
-from torch.nn import Linear, Module
+from torch.nn import Linear, Module, functional as F
 from torch_geometric.typing import Adj, PairTensor
 
 class NodeLinear(Linear):
@@ -17,7 +17,6 @@ class GCNRelu(Module):
     def forward(self, x: Union[Tensor, PairTensor], edge_index: Adj, edge_attr: Tensor) -> Tensor:
         return torch.relu(x), torch.relu(edge_attr)
     
-class GCNSoftmax(Module):
+class GCNLogSoftmax(Module):
     def forward(self, x: Union[Tensor, PairTensor], edge_index: Adj, edge_attr: Tensor) -> Tensor:
-        return torch.softmax(x), torch.softmax(edge_attr)
-    
+        return F.log_softmax(x, dim=1), F.log_softmax(edge_attr, dim=1)    
