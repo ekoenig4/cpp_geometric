@@ -1,3 +1,4 @@
+import os
 import torch 
 import numpy as np 
 import awkward as ak 
@@ -22,7 +23,6 @@ def _get_biases(root, shapes):
     biases = [f_biases[lo:hi]
               for lo, hi in zip(biases_index[:-1], biases_index[1:])]
     return biases
-
 
 class GeoModel:
     def __init__(self, root):
@@ -57,3 +57,64 @@ class GeoModel:
         for layer in self.sequence:
             x, edge_attr = layer(x, edge_index, edge_attr)
         return x, edge_attr
+
+def export_array(array):
+    return ",".join(map(str,np.array(array).flatten()))
+
+def export_layer(layer):
+    state = {param.replace("linear.", ""): array.numpy()
+             for param, array in layer.state_dict().items()}
+
+    if any(state):
+        return {
+            "class": type(layer).__name__,
+            "shape": state["weight"].shape,
+            "weight": state["weight"],
+            "bias": state["bias"]
+        }
+    else:
+        return  {
+            "class": type(layer).__name__,
+            "shape": np.array([0,0]),
+            "weight": np.array([]),
+            "bias": np.array([])
+        }
+
+def export_model(model,template,outdir):
+    print(f"Exporting model to: {outdir}")
+    
+    layers = [
+        export_layer(layer)
+        for _, layer in model.named_children()
+    ]
+    
+    cfg = {
+        "model": {
+            "num_node_features": template.num_node_features,
+            "node_feautres": export_array(template.node_attr_names),
+            "num_edge_features": template.num_edge_features,
+            "edge_features": export_array(template.edge_attr_names),
+            "num_layers": len(layers),
+            "layers": export_array([layer["class"] for layer in layers]),
+            "layer_shapes": export_array([layer["shape"] for layer in layers])
+        },
+        "scaler": {
+            "node_scale_min": export_array(template.node_scaler.minims),
+            "node_scale_max": export_array(template.node_scaler.maxims),
+            "edge_scale_min": export_array(template.edge_scaler.minims),
+            "edge_scale_max": export_array(template.edge_scaler.maxims)
+        }
+    }
+    keyvalue = lambda kv : f"{kv[0]} = {kv[1]}"
+    export_params = lambda d : "\n".join( map(keyvalue,d.items()) )
+
+    yaml = "\n\n".join( f"[{key}]\n{export_params(params)}" for key,params in cfg.items() )
+    print(yaml)
+    
+    weight_csv = np.concatenate([ layer["weight"].flatten() for layer in layers ])
+    bias_csv = np.concatenate([ layer["bias"].flatten() for layer in layers ])
+    
+    os.makedirs(outdir)
+    with open(f"{outdir}/model.cfg","w") as f: f.write(yaml) 
+    np.savetxt(f"{outdir}/weights.txt", weight_csv)
+    np.savetxt(f"{outdir}/bias.txt",bias_csv)
