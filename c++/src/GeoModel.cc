@@ -1,5 +1,7 @@
 #include "GeoModel.h"
 
+#include <algorithm>
+
 using namespace std;
 using namespace Eigen;
 
@@ -28,7 +30,7 @@ void TorchUtils::Scaler::standardize(MatrixXf &x)
     {
         for (unsigned int j = 0; j < x.rows(); j++)
         {
-            x(j, i) = (x(j, i) -means[i]) / stdvs[i];
+            x(j, i) = (x(j, i) - means[i]) / stdvs[i];
         }
     }
 }
@@ -42,11 +44,8 @@ void TorchUtils::Scaler::scale(MatrixXf &x, string type)
         standardize(x);
 }
 
-TorchUtils::GeoModel::GeoModel(string root)
+void TorchUtils::GeoModel::init_scaler()
 {
-    this->root = root;
-    cfg.init(root + "/model.cfg");
-
     scale_type = cfg.readStringOpt("features", "scale");
 
     node_scaler = new Scaler(
@@ -60,6 +59,44 @@ TorchUtils::GeoModel::GeoModel(string root)
         cfg.readFloatListOpt("scaler", "edge_scale_max"),
         cfg.readFloatListOpt("scaler", "edge_scale_mean"),
         cfg.readFloatListOpt("scaler", "edge_scale_std"));
+}
+
+vector<int> get_mask(vector<string> str_features, vector<string> str_mask)
+{
+    vector<int> mask;
+
+    if (str_features.size() == str_mask.size())
+        return mask;
+
+    for (unsigned int i = 0; i < str_features.size(); i++)
+    {
+        if (std::find(str_mask.begin(), str_mask.end(), str_features[i]) != str_mask.end())
+        {
+            mask.push_back(i);
+        }
+    }
+
+    return mask;
+}
+
+void TorchUtils::GeoModel::init_masks()
+{
+    vector<string> str_node_features = cfg.readStringListOpt("features", "node_features");
+    vector<string> str_node_mask = cfg.readStringListOpt("features", "node_mask");
+    node_mask = get_mask(str_node_features, str_node_mask);
+
+    vector<string> str_edge_features = cfg.readStringListOpt("features", "edge_features");
+    vector<string> str_edge_mask = cfg.readStringListOpt("features", "edge_mask");
+    edge_mask = get_mask(str_edge_features, str_edge_mask);
+}
+
+TorchUtils::GeoModel::GeoModel(string root)
+{
+    this->root = root;
+    cfg.init(root + "/model.cfg");
+
+    init_scaler();
+    init_masks();
 
     vector<string> layers = cfg.readStringListOpt("model", "layers");
     vector<int> f_shapes = cfg.readIntListOpt("model", "layer_shapes");
@@ -130,6 +167,19 @@ void TorchUtils::GeoModel::scale(MatrixXf &x, MatrixXf &edge_attr)
     edge_scaler->scale(edge_attr, scale_type);
 }
 
+void TorchUtils::GeoModel::mask(MatrixXf &x, MatrixXf &edge_attr)
+{
+    if (node_mask.size() > 0)
+    {
+        x = x(Eigen::placeholders::all, node_mask);
+    }
+
+    if (edge_mask.size() > 0)
+    {
+        edge_attr = edge_attr(Eigen::placeholders::all, edge_mask);
+    }
+}
+
 tuple<vector<float>,vector<float>> TorchUtils::GeoModel::evaluate(vector<vector<float>> &x, vector<vector<int>> &edge_index, vector<vector<float>> &edge_attr)
 {
     MatrixXf m_node_o = to_eigen(x);
@@ -139,6 +189,7 @@ tuple<vector<float>,vector<float>> TorchUtils::GeoModel::evaluate(vector<vector<
 tuple<vector<float>,vector<float>> TorchUtils::GeoModel::evaluate(MatrixXf &x, vector<vector<int>> &edge_index, MatrixXf &edge_attr)
 {
     scale(x, edge_attr);
+    mask(x, edge_attr);
     apply(x, edge_index, edge_attr);
 
     vector<float> node_o(x.rows());

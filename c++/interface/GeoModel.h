@@ -37,6 +37,7 @@ namespace TorchUtils
         std::tuple<std::vector<float>, std::vector<float>> evaluate(Eigen::MatrixXf &x, std::vector<std::vector<int>> &edge_index, Eigen::MatrixXf &edge_attr);
         void apply(Eigen::MatrixXf &x, std::vector<std::vector<int>> &edge_index, Eigen::MatrixXf &edge_attr);
         void scale(Eigen::MatrixXf &x, Eigen::MatrixXf &edge_attr);
+        void mask(Eigen::MatrixXf &x, Eigen::MatrixXf &edge_attr);
         void print();
 
     private:
@@ -46,9 +47,14 @@ namespace TorchUtils
         std::vector<Eigen::MatrixXf> get_weights(std::vector<std::vector<int>> shapes);
         std::vector<Eigen::MatrixXf> get_biases(std::vector<std::vector<int>> shapes);
 
+        void init_scaler();
         std::string scale_type;
         Scaler *node_scaler;
         Scaler *edge_scaler;
+
+        void init_masks();
+        std::vector<int> node_mask;
+        std::vector<int> edge_mask;
     };
 }
 

@@ -432,6 +432,57 @@ void test_GeoModel_Evaluate()
   printf("Finished Testing %s\n", test);
 }
 
+
+void test_GeoModel_Evaluate_Golden()
+{
+  char test[] = "TorchUtils::GeoModel::evaluate";
+  printf("Testing %s...\n", test);
+
+  printf("Loading model...\n");
+  TorchUtils::GeoModel model("../golden_gcn");
+  model.print();
+
+  TorchUtils::Dataset dataset("../golden_csv");
+
+  dataset.load_extra("golden");
+  printf("Processesing %i Graphs...\n", (int)dataset.size());
+  float node_error, edge_error;
+  node_error = edge_error = 0;
+  for (TorchUtils::Graph g : dataset)
+  {
+    Eigen::MatrixXf node_o, edge_o;
+    node_o = g.node_x;
+    edge_o = g.edge_attr;
+
+    MatrixXf m_node_targ, m_edge_targ;
+    g.get_extra("golden", m_node_targ, m_edge_targ);
+
+    vector<float> node_targ(m_node_targ.rows());
+    for (unsigned int i = 0; i < m_node_targ.rows(); i++)
+    {
+      node_targ[i] = exp(m_node_targ(i, 1));
+    }
+
+    vector<float> edge_targ(m_edge_targ.rows());
+    for (unsigned int i = 0; i < m_edge_targ.rows(); i++)
+    {
+      edge_targ[i] = exp(m_edge_targ(i, 1));
+    }
+
+      tuple<vector<float>, vector<float>> pred = model.evaluate(node_o, g.edge_index, edge_o);
+
+    vector<float> node_pred = get<0>(pred);
+    vector<float> edge_pred = get<1>(pred);
+
+    node_error += vector_difference(node_targ,node_pred);
+    edge_error += vector_difference(edge_targ, edge_pred);
+  }
+
+  printf("--- Node Error: %f\n", node_error);
+  printf("--- Edge Error: %f\n", edge_error);
+  printf("Finished Testing %s\n", test);
+}
+
 int main()
 {
   // test_Linear();
@@ -446,5 +497,5 @@ int main()
   // test_GCNLogSoftmax();
   // test_GeoModel();
   // test_GeoModel_Scale();
-  test_GeoModel_Evaluate();
+  // test_GeoModel_Evaluate();
 }
