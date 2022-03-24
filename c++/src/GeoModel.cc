@@ -3,15 +3,63 @@
 using namespace std;
 using namespace Eigen;
 
+TorchUtils::Scaler::Scaler(vector<float> minims, vector<float> maxims, vector<float> means, vector<float> stdvs)
+{
+    this->minims = minims;
+    this->maxims = maxims;
+    this->means = means;
+    this->stdvs = stdvs;
+}
+
+void TorchUtils::Scaler::raw(MatrixXf &x) {}
+void TorchUtils::Scaler::normalize(MatrixXf &x)
+{
+    for (unsigned int i = 0; i < minims.size(); i++)
+    {
+        for (unsigned int j = 0; j < x.rows(); j++)
+        {
+            x(j, i) = (x(j, i) - minims[i]) / (maxims[i] - minims[i]);
+        }
+    }
+}
+void TorchUtils::Scaler::standardize(MatrixXf &x)
+{
+    for (unsigned int i = 0; i < minims.size(); i++)
+    {
+        for (unsigned int j = 0; j < x.rows(); j++)
+        {
+            x(j, i) = (x(j, i) -means[i]) / stdvs[i];
+        }
+    }
+}
+void TorchUtils::Scaler::scale(MatrixXf &x, string type)
+{
+    if (type == "raw")
+        raw(x);
+    if (type == "normalize")
+        normalize(x);
+    if (type == "standardize")
+        standardize(x);
+}
+
 TorchUtils::GeoModel::GeoModel(string root)
 {
     this->root = root;
     cfg.init(root + "/model.cfg");
 
-    node_scale_min = cfg.readFloatListOpt("scaler", "node_scale_min");
-    node_scale_max = cfg.readFloatListOpt("scaler", "node_scale_max");
-    edge_scale_min = cfg.readFloatListOpt("scaler", "edge_scale_min");
-    edge_scale_max = cfg.readFloatListOpt("scaler", "edge_scale_max");
+    scale_type = cfg.readStringOpt("features", "scale");
+
+    node_scaler = new Scaler(
+        cfg.readFloatListOpt("scaler", "node_scale_min"),
+        cfg.readFloatListOpt("scaler", "node_scale_max"),
+        cfg.readFloatListOpt("scaler", "node_scale_mean"),
+        cfg.readFloatListOpt("scaler", "node_scale_std"));
+
+    edge_scaler = new Scaler(
+        cfg.readFloatListOpt("scaler", "edge_scale_min"),
+        cfg.readFloatListOpt("scaler", "edge_scale_max"),
+        cfg.readFloatListOpt("scaler", "edge_scale_mean"),
+        cfg.readFloatListOpt("scaler", "edge_scale_std"));
 
     vector<string> layers = cfg.readStringListOpt("model", "layers");
     vector<int> f_shapes = cfg.readIntListOpt("model", "layer_shapes");
@@ -78,21 +126,8 @@ void TorchUtils::GeoModel::apply(MatrixXf &x, vector<vector<int>> &edge_index, M
 
 void TorchUtils::GeoModel::scale(MatrixXf &x, MatrixXf &edge_attr)
 {
-    for (unsigned int i = 0; i < node_scale_min.size(); i++)
-    {
-        for (unsigned int j = 0; j < x.rows(); j++)
-        {
-            x(j, i) = (x(j, i) - node_scale_min[i]) / (node_scale_max[i] - node_scale_min[i]);
-        }
-    }
-
-    for (unsigned int i = 0; i < edge_scale_min.size(); i++)
-    {
-        for (unsigned int j = 0; j < edge_attr.rows(); j++)
-        {
-            edge_attr(j, i) = (edge_attr(j, i) - edge_scale_min[i]) / (edge_scale_max[i] - edge_scale_min[i]);
-        }
-    }
+    node_scaler->scale(x, scale_type);
+    edge_scaler->scale(edge_attr, scale_type);
 }
 
 tuple<vector<float>,vector<float>> TorchUtils::GeoModel::evaluate(vector<vector<float>> &x, vector<vector<int>> &edge_index, vector<vector<float>> &edge_attr)

@@ -12,6 +12,22 @@
 
 namespace TorchUtils
 {
+    class Scaler
+    {
+    public:
+        Scaler(std::vector<float> minims, std::vector<float> maxims, std::vector<float> means, std::vector<float> stdvs);
+        void raw(Eigen::MatrixXf &x);
+        void normalize(Eigen::MatrixXf &x);
+        void standardize(Eigen::MatrixXf &x);
+        void scale(Eigen::MatrixXf &x, std::string type);
+
+    private:
+        std::vector<float> minims;
+        std::vector<float> maxims;
+        std::vector<float> means;
+        std::vector<float> stdvs;
+    };
+
     class GeoModel
     {
     public:
@@ -30,10 +46,9 @@ namespace TorchUtils
         std::vector<Eigen::MatrixXf> get_weights(std::vector<std::vector<int>> shapes);
         std::vector<Eigen::MatrixXf> get_biases(std::vector<std::vector<int>> shapes);
 
-        std::vector<float> node_scale_min;
-        std::vector<float> node_scale_max;
-        std::vector<float> edge_scale_min;
-        std::vector<float> edge_scale_max;
+        std::string scale_type;
+        Scaler *node_scaler;
+        Scaler *edge_scaler;
     };
 }
 

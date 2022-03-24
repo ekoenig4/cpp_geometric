@@ -386,7 +386,6 @@ float vector_difference(vector<float> targ, vector<float> test)
 
 void test_GeoModel_Evaluate()
 {
-
   char test[] = "TorchUtils::GeoModel::evaluate";
   printf("Testing %s...\n", test);
 
