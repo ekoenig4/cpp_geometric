@@ -34,3 +34,10 @@
 # Python
 __pycache__
 *.pyc
+
+
+.vscode
+.ipynb_checkpoints
+
+*.txt
+*.cfg
