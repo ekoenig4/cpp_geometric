@@ -12,7 +12,8 @@ using namespace std;
 using namespace Eigen;
 using namespace TorchUtils;
 
-Dataset dataset("../golden_csv");
+Dataset dataset("/uscms_data/d3/ekoenig/8BAnalysis/studies/sixbStudies/jupyter/eightb/pairing_methods/graph_net/cpg_test_data/golden_gcn_no-btag");
+GeoModel model("/uscms_data/d3/ekoenig/8BAnalysis/studies/sixbStudies/jupyter/eightb/pairing_methods/graph_net/cpg_models/golden_gcn_no-btag");
 
 
 float vector_difference(vector<float> targ, vector<float> test)
@@ -30,10 +31,7 @@ void test_Scale()
   char test[] = "TorchUtils::GeoModel::Scale";
   printf("Testing %s...\n", test);
 
-  printf("Loading model...\n");
-  GeoModel model("../golden_gcn");
-
-  dataset.load_extra("scaled");
+  dataset.load_extra("prep");
   printf("Processesing %i Graphs...\n", (int)dataset.size());
   float node_error, edge_error;
   node_error = edge_error = 0;
@@ -44,12 +42,14 @@ void test_Scale()
     edge_pred = g.edge_attr;
 
     model.scale(node_pred, edge_pred);
+    model.mask(node_pred, edge_pred);
 
     MatrixXf node_targ, edge_targ;
-    g.get_extra("scaled", node_targ, edge_targ);
+    g.get_extra("prep", node_targ, edge_targ);
 
     node_error += matrix_difference(node_targ,node_pred);
     edge_error += matrix_difference(edge_targ,edge_pred);
+    break;
 
   }
 
@@ -65,9 +65,6 @@ void test_Golden()
 {
   char test[] = "TorchUtils::GeoModel";
   printf("Testing %s...\n", test);
-
-  printf("Loading model...\n");
-  GeoModel model("../golden_gcn");
 
   dataset.load_extra("golden");
   printf("Processesing %i Graphs...\n", (int)dataset.size());
@@ -113,6 +110,6 @@ void test_Golden()
 
 int main()
 {
-  // test_Scale();
+  test_Scale();
   test_Golden();
 }
