@@ -61,7 +61,7 @@ def export_model(model,template,outdir=None):
         },
         "features":{
             "num_node_features": len(template.node_attr_names),
-            "node_feautres": export_array(template.node_attr_names),
+            "node_features": export_array(template.node_attr_names),
             
             "num_node_mask":len(model.hparams["node_attr_names"]),
             "node_mask":export_array(model.hparams["node_attr_names"]),
