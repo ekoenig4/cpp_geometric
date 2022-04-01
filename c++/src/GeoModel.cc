@@ -167,16 +167,32 @@ void TorchUtils::GeoModel::scale(MatrixXf &x, MatrixXf &edge_attr)
     edge_scaler->scale(edge_attr, scale_type);
 }
 
+void _mask(MatrixXf &x, vector<int> mask)
+{
+    MatrixXf masked_x(x.rows(), mask.size());
+    for (unsigned int row = 0; row < x.rows(); row++)
+    {
+        for (unsigned int col = 0; col < mask.size(); col++)
+        {
+            masked_x(row,col) = x(row, mask[col]);
+        }
+    }
+    x = masked_x;
+}
+
 void TorchUtils::GeoModel::mask(MatrixXf &x, MatrixXf &edge_attr)
 {
     if (node_mask.size() > 0)
     {
-        x = x(Eigen::placeholders::all, node_mask);
+        // x = x(Eigen::placeholders::all, node_mask);
+        _mask(x, node_mask);
+
     }
 
     if (edge_mask.size() > 0)
     {
-        edge_attr = edge_attr(Eigen::placeholders::all, edge_mask);
+        // edge_attr = edge_attr(Eigen::placeholders::all, edge_mask);
+        _mask(edge_attr, edge_mask);
     }
 }
 
